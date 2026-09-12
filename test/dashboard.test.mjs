@@ -17,5 +17,9 @@ test('dashboard authenticates API, rejects foreign origins/hosts, lists only saf
  assert.equal(await new Promise((ok,fail)=>{const req=request(origin,{headers:{host:'foreign.example'}},res=>{res.resume();ok(res.statusCode);});req.on('error',fail);req.end();}),403);
  const headers={authorization:`Bearer ${token}`};const response=await(await fetch(origin+'/api/status',{headers})).json();assert.equal(response.projects.length,1);assert.ok(!JSON.stringify(response).includes('op://'));
  assert.equal((await fetch(origin+'/api/stop',{method:'POST',headers:{...headers,'content-type':'application/json',origin:'https://foreign.example'},body:JSON.stringify({id:response.projects[0].id})})).status,403);
+ const envRequest={method:'POST',headers:{...headers,'content-type':'application/json',origin:'https://foreign.example'},body:JSON.stringify({name:'review',sourceId:response.projects[0].id})};
+ for(const action of ['env-create','env-start','env-stop','env-update','env-pause','env-resume']) assert.equal((await fetch(origin+'/api/'+action,envRequest)).status,403);
+ const invalid=await fetch(origin+'/api/env-create',{...envRequest,headers:{...envRequest.headers,origin},body:JSON.stringify({name:'review',sourceId:'unknown'})});assert.equal(invalid.status,400);
+ assert.deepEqual(response.environments,[]);
  const qr=await(await fetch(origin+'/api/qr',{method:'POST',headers:{...headers,'content-type':'application/json',origin},body:JSON.stringify({id:response.projects[0].id,service:'website',page:'/hello'})})).json();assert.match(qr.svg,/<svg/);assert.match(qr.url,/\/hello$/);
 });

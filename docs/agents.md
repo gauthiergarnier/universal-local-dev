@@ -21,3 +21,8 @@ Repository contributors should read AGENTS.md. Adopting projects should designat
 the same launcher in their README, AGENTS.md and CLAUDE.md and keep native commands
 as escape hatches. Do not equate agent permission to run a local preview with
 permission to publish secrets, modify remote envs or reconfigure tailnet-wide DNS.
+
+User review uses named integration environments, with `local-test` as the default
+branch in each repository. Agent work stays on independent feature worktrees.
+See [environments](environments.md) for intentional promotion, coordinated updates
+and the boundary before online staging.

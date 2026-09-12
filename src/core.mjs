@@ -5,7 +5,7 @@ import { homedir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { createServer } from 'node:net';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 export const stateRoot = () => resolve(process.env.LOCAL_DEV_STATE || `${homedir()}/.local/state/local-dev`);
 export const hash = value => createHash('sha256').update(value).digest('hex').slice(0, 10);
 export const label = value => typeof value === 'string' && /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(value);

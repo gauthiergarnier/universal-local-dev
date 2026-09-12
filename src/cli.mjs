@@ -12,10 +12,11 @@ import { serviceEnv, newSecret } from './environment.mjs';
 import { dataCommand } from './integration.mjs';
 import { sync } from './secrets-sync.mjs';
 import { prepareSystem } from './system-setup.mjs';
+import { createEnvironment, environments, EnvironmentManager } from './environments.mjs';
 import { dashboard, rememberProject } from './dashboard.mjs';
 
 const { values:o, positionals } = parseArgs({ allowPositionals:true, options:Object.fromEntries([
-  ...['manifest','profile','name','project','app','marketing','simulator','port','namespace','domain','tailnet-ip','https-port','confirm','environment','uuid','plan','page','service'].map(k => [k,{ type:'string' }]),
+  ...['manifest','profile','name','project','app','marketing','simulator','port','namespace','domain','tailnet-ip','https-port','confirm','environment','uuid','plan','page','service','branch'].map(k => [k,{ type:'string' }]),
   ...['apply','qr','migrate','help'].map(k => [k,{type:'boolean'}]),
 ]) });
 const aliases = { init:'setup', start:'up', dev:'up', smoke:'check' };
@@ -68,7 +69,7 @@ async function urls(stack) {
 async function main() {
   if (action === 'version') return console.log(VERSION);
   if (action === 'self-test') return execFileSync(process.execPath,['--test',...(await readdir(resolve(src,'../test'))).filter(n=>n.endsWith('.test.mjs')).map(n=>resolve(src,'../test',n))],{stdio:'inherit'});
-  if (action === 'help' || o.help) return console.log(`Universal Local Dev ${VERSION}\nsetup [--app PATH --simulator PATH --name NAME --tailnet-ip IP] [--migrate]\ndoctor | host-up | host-setup | dashboard | register | up | down | status | check | urls | qr [--service NAME --page /path]\n--profile visual|integration|simulator-source --manifest PATH\ndata-up | data-down | data-reset --confirm STACK | migrate | fixtures\nrecover | email-preview | build\nsecrets-sync --plan PATH --environment ENV --uuid UUID [--apply]\nSetup and trust instructions: docs/setup.md`);
+  if (action === 'help' || o.help) return console.log(`Universal Local Dev ${VERSION}\nsetup [--app PATH --simulator PATH --name NAME --tailnet-ip IP] [--migrate]\ndoctor | host-up | host-setup | dashboard | register | up | down | status | check | urls | qr [--service NAME --page /path]\n--profile visual|integration|simulator-source --manifest PATH\ndata-up | data-down | data-reset --confirm STACK | migrate | fixtures\nrecover | email-preview | build\nenv-create --name local-test [--manifest PATH --branch local-test --profile PROFILE --plan PATH]\nenv-list | env-start | env-stop | env-update | env-pause | env-resume --name NAME\nenv-watch (also built into dashboard) | urls --environment NAME\nsecrets-sync --plan PATH --environment ENV --uuid UUID [--apply]\nSetup and trust instructions: docs/setup.md`);
   if (action === 'setup') return setup();
   if (action === 'secrets-sync') return console.log(JSON.stringify(await sync(await json(resolve(o.plan)), { environment:o.environment, applicationUUID:o.uuid, productionApproval:o.confirm }, { apply:!!o.apply, token:process.env.COOLIFY_API_TOKEN }),null,2));
   const host = await json(resolve(root,'host.json'));
@@ -76,7 +77,18 @@ async function main() {
   if (action === 'host-up') return runHost(host);
   if (action === 'dashboard') return dashboard(root,host,Number(o.port || 19440));
   if (action === 'register') { await manifest(file,host,o.profile || 'visual'); await rememberProject(root,file); console.log('Registered worktree for the dashboard'); return; }
-  const stack = await manifest(file,host,o.profile || 'visual');
+  if (action === 'env-list') return console.log(JSON.stringify(await environments(root),null,2));
+  if (action === 'env-create') {
+    const plan = o.plan ? await json(resolve(o.plan)) : {};
+    return console.log(JSON.stringify(await createEnvironment(root,host,{...plan,file:o.manifest ? file : plan.file || file,name:o.name || plan.name,branch:o.branch || plan.branch,profile:o.profile || plan.profile}),null,2));
+  }
+  if (['env-start','env-stop','env-update','env-pause','env-resume'].includes(action)) {
+    return console.log(JSON.stringify(await new EnvironmentManager(root,host).operate(o.name,action.slice(4)),null,2));
+  }
+  if (action === 'env-watch') {new EnvironmentManager(root,host).watch();console.log('Watching local integration branches. Ctrl+C stops updates; running stacks stay up.');return;}
+  const environment = o.environment ? (await environments(root)).find(e=>e.name===o.environment) : null;
+  if(o.environment) assert(environment,'Unknown local environment');
+  const stack = await manifest(environment?.file || file,host,o.profile || environment?.profile || 'visual');
   if (action === 'urls' || action === 'qr') return urls(stack);
   if (action === 'doctor') {
     await urls(stack);

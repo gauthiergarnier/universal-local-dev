@@ -1,6 +1,6 @@
 ---
 name: universal-local-dev
-description: Run and diagnose isolated local project/worktree stacks with the universal-local-dev CLI, private HTTPS previews, native hot reload, local dashboard and phone QR access. Use for local stack setup/lifecycle or adopting a project into this workflow, not production deployment.
+description: Run and diagnose isolated local project/worktree stacks with the universal-local-dev CLI, private HTTPS previews, native hot reload, local dashboard, named branch-tracking integration environments and phone QR access. Use for local stack setup/lifecycle or adopting a project into this workflow, not production deployment.
 ---
 
 Use the installed `local-dev` CLI.
@@ -17,6 +17,13 @@ Default to the credential-free visual profile. Use integration only for requeste
 local data/auth work and declared local/test references. Native runtimes keep hot
 reload; no install/build/harvest/vendoring/migration is part of normal up. Report
 actual service path, branch, commit, profile and URL so the user can identify it.
+
+Distinguish agent previews from user integration environments. Keep agent work on
+feature worktrees; named user environments track committed local branches, normally
+`local-test`, using managed runtime clones. Do not edit those clones or auto-merge
+features. Pause updates when intentionally advancing several repositories together.
+Use `env-*` controls for managed environments. Read [integration environments](references/environments.md)
+for creation, automatic updates, recovery and promotion before online staging.
 
 Host ownership, atomic registration, process identity, callback origins and secret
 boundaries are load-bearing. Down uses the authenticated supervisor. Never replace

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { json, atomic, lock, manifest, assert, gitIdentity } from './core.mjs';
 import { control } from './supervisor.mjs';
+import { createEnvironment, environments, EnvironmentManager } from './environments.mjs';
 import { cleanEnv } from './environment.mjs';
 const here=dirname(fileURLToPath(import.meta.url));
 export async function rememberProject(root,file) {
@@ -23,19 +24,31 @@ export async function dashboard(root,host,port=19440) {
   const html=await readFile(resolve(here,'dashboard.html'),'utf8');
   const script=await readFile(resolve(here,'dashboard-ui.js'),'utf8');
   const pending=new Set();
+  const manager=new EnvironmentManager(root,host);
   async function models() {
     const registry=await json(resolve(root,'registry.json'),{stacks:{}});
     const projects=await json(resolve(root,'projects.json'),{manifests:[]});
     const entries=[];
+    const envs=await environments(root);
+    const environmentFiles=new Set(envs.map(e=>e.file));
     for(const file of [...new Set([...projects.manifests,...Object.values(registry.stacks).map(s=>s.file)])]) {
+      if(environmentFiles.has(file)) continue;
       try {
         const m=await manifest(file,host);const active=registry.stacks[m.id];
         let status=active ? 'unreachable' : pending.has(m.id) ? 'starting' : 'stopped';
         if(active) {try {const state=await control(active);status=state.stopping?'stopping':state.ready===false?'starting':'running';pending.delete(m.id);}catch{}}
-        entries.push({id:m.id,name:m.name,project:m.project,file,domain:m.domain,status,profile:active?.profile||'visual',services:(active?.services||m.services).map(s=>({name:s.name,adapter:s.adapter,origin:s.origin,port:s.port,identity:gitIdentity(s.path)}))});
+        entries.push({id:m.id,name:m.name,project:m.project,file,domain:m.domain,status,profile:active?.profile||'visual',catalog:(await json(file)).services.map(s=>({name:s.name,adapter:s.adapter,branch:gitIdentity(resolve(dirname(file),s.path)).branch})),services:(active?.services||m.services).map(s=>({name:s.name,adapter:s.adapter,origin:s.origin,port:s.port,identity:gitIdentity(s.path)}))});
       }catch{entries.push({file,status:'invalid',name:'Invalid project configuration',services:[]});}
     }
-    return {namespace:host.domain,httpsPort:host.httpsPort||8443,tailnetConfigured:!!host.tailnetIP,projects:entries};
+    const integration=[];
+    for(const row of envs) {
+      try {
+        const m=await manifest(row.file,host,row.profile);
+        let runtime='stopped';try{runtime=await manager.runtime.status(row);}catch{runtime='unreachable';}
+        integration.push({name:row.name,id:row.id,status:row.phase,runtime,profile:row.profile,autoUpdate:row.autoUpdate,desired:row.desired,busy:['updating','stopping'].includes(row.phase),error:row.error,appliedAt:row.appliedAt,applied:row.applied||[],services:m.services.map(s=>({name:s.name,adapter:s.adapter,port:s.port,origin:s.origin,branch:row.repositories.find(r=>r.name===s.name)?.branch,commit:row.repositories.find(r=>r.name===s.name)?.commit}))});
+      }catch {integration.push({name:row.name,status:'invalid',error:'Environment manifest needs repair',services:[],applied:[]});}
+    }
+    return {namespace:host.domain,httpsPort:host.httpsPort||8443,tailnetConfigured:!!host.tailnetIP,projects:entries,environments:integration};
   }
   const server=createServer(async(req,res)=>{
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');
@@ -52,12 +65,29 @@ export async function dashboard(root,host,port=19440) {
       if(req.method==='GET' && url.pathname==='/api/status') return send(200,await models());
       if(req.method!=='POST' || req.headers.origin!==requestOrigin || req.headers['content-type']!=='application/json') return send(403,{error:'Same-origin JSON request required'});
       let body='';for await(const part of req){body+=part;assert(body.length<4096,'Request too large');}
-      const input=JSON.parse(body);const project=(await models()).projects.find(p=>p.id===input.id);
+      const input=JSON.parse(body);
+      if(url.pathname==='/api/env-create') {
+        const source=(await models()).projects.find(p=>p.id===input.sourceId);
+        assert(source,'Choose a registered agent preview as the repository template');
+        const row=await createEnvironment(root,host,{file:source.file,name:input.name,profile:input.profile,branches:input.branches,services:input.services});
+        void manager.operate(row.name,'start').catch(()=>{});
+        return send(202,{ok:true,name:row.name});
+      }
+      if(['/api/env-start','/api/env-stop','/api/env-update','/api/env-pause','/api/env-resume'].includes(url.pathname)) {
+        assert((await environments(root)).some(e=>e.name===input.name),'Unknown local environment');
+        const action=url.pathname.slice('/api/env-'.length);
+        if(['pause','resume'].includes(action)) {await manager.operate(input.name,action);return send(200,{ok:true});}
+        void manager.operate(input.name,action).catch(()=>{});
+        return send(202,{ok:true});
+      }
+      const state=await models();const project=[...state.projects,...state.environments].find(p=>p.id===input.id);
       assert(project,'Unknown registered project');
       if(url.pathname==='/api/stop') {
+        assert(state.projects.some(p=>p.id===input.id),'Use the environment controls for managed checkouts');
         const active=(await json(resolve(root,'registry.json'),{stacks:{}})).stacks[input.id];if(active)await control(active,'down');return send(200,{ok:true});
       }
       if(url.pathname==='/api/start') {
+        assert(state.projects.some(p=>p.id===input.id),'Use the environment controls for managed checkouts');
         assert(project.status==='stopped' && !pending.has(project.id),'Project already running or needs recovery');
         assert(['visual','integration','simulator-source'].includes(input.profile),'Invalid profile');
         await manifest(project.file,host,input.profile);
@@ -78,6 +108,8 @@ export async function dashboard(root,host,port=19440) {
   });
   await new Promise((ok,fail)=>{server.once('error',fail);server.listen(port,'127.0.0.1',ok);});
   console.log(`Universal Local Dev dashboard: ${publicOrigin}\nDirect diagnostic URL: ${origin}\nLoopback only. Close the dashboard without stopping independently supervised stacks.`);
+  const stopWatch=manager.watch();
+  server.once('close',stopWatch);
   const stop=()=>{server.closeAllConnections();server.close();};process.once('SIGINT',stop);process.once('SIGTERM',stop);
   return server;
 }

@@ -30,3 +30,9 @@ credential values and raw registry control tokens. Avoid external UI dependencie
 SKILL.md is maintained under skills/universal-local-dev; it works for Codex and
 Claude Code. Keep it self-contained and validate its frontmatter after changes.
 Report automated tests, actual host setup and human phone steps separately.
+
+Agent previews belong to feature worktrees. Named user integration environments
+track committed local branches (default local-test) in managed runtime clones. Do
+not edit those clones or auto-merge feature branches. Use env-start/stop/update and
+pause the watcher while intentionally advancing a coordinated multi-repo batch.
+Read docs/environments.md for update failures, dependency preparation and staging.

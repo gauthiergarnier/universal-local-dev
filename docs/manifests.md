@@ -22,7 +22,9 @@ manifest directory and canonicalized before identity/ownership checks.
 Commands are argv arrays, not shell strings. `{host}` is 127.0.0.1, `{port}` is the
 internal port, `{origin}` is the public HTTPS origin. The command adapter must
 honor that bind contract. Do not insert shell operators; write a project script
-for a multi-step native command. No dependency install or build runs automatically.
+for a multi-step native command. Normal `up` never installs dependencies or builds. Named user environments explicitly
+prepare their isolated clones and reinstall locked dependencies when inputs change;
+see [environments](environments.md).
 
 Built-in adapters: `marketing` runs installed Next dev; `app` serves public pins in
 visual mode and native Node watch in integration; `simulator` runs installed Vite

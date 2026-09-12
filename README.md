@@ -6,7 +6,9 @@ and keep processes, cookies and disposable data scoped to their stack.
 
 **macOS first · Node 22+ · MIT · no monorepo required**
 
-- A local dashboard with branch/commit identity, profile start/stop and page QR codes.
+- A local dashboard separating agent previews from named user integration environments.
+- Coordinated branch updates across repositories, with `local-test` before online staging.
+- Stable private URLs, branch/commit identity, start/stop, pause/resume and page QR codes.
 - Caddy local CA, dnsmasq and Tailscale split DNS, with explicit trust and rollback.
 - Native Next.js, Node and Vite hot reload; loopback application backends.
 - A generic manifest plus Next.js, Node, Vite and static adapters.
@@ -48,6 +50,11 @@ Use [manifests and adapters](docs/manifests.md) for Next, Node, Vite or an arbit
 argv command. [Integration profiles](docs/integration.md) explain isolated data,
 project-provided fixtures and captured local email. Native commands remain escape hatches.
 
+Use [user integration environments](docs/environments.md) to align committed branches
+across repositories. Create as many named environments as needed from the dashboard;
+`local-test` is the default branch. Updates run automatically while the dashboard or
+`env-watch` is running.
+
 ## Agents
 
 Install `skills/universal-local-dev` into `~/.codex/skills/` for Codex or
@@ -64,6 +71,7 @@ is a real phone test.
 | `src/cli.mjs` | Shared command interface |
 | `src/core.mjs`, `registry.mjs`, `supervisor.mjs` | Manifest validation and owned lifecycle |
 | `src/host.mjs`, `system-setup.mjs` | Dedicated Caddy/DNS configuration and rollback |
+| `src/environments.mjs` | Named integration environments and branch update watcher |
 | `src/dashboard*` | Local UI and authenticated loopback API |
 | `src/adapters.mjs`, `environment.mjs`, `integration.mjs` | Native adapters and isolated profiles |
 | `src/secrets-sync.mjs` | Replaceable secret provider and redacted Coolify adapter |

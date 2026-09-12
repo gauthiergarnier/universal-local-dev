@@ -1,0 +1,36 @@
+{
+  "name": "@gauthiergarnier/universal-local-dev",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "local-dev": "src/cli.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4"
+  },
+  "license": "MIT",
+  "description": "One local launcher for isolated worktrees, private HTTPS previews, mobile access and agent workflows",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gauthiergarnier/universal-local-dev.git"
+  },
+  "files": [
+    "src",
+    "templates",
+    "skills",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "test",
+    "examples/hello/public",
+    "examples/hello/local-dev.project.json"
+  ]
+}

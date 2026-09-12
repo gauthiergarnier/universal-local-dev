@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "environment": "staging",
+  "environmentUUID": "REPLACE-ENVIRONMENT-UUID",
+  "applicationUUID": "REPLACE-APPLICATION-UUID",
+  "apiOrigin": "https://coolify.example.test",
+  "keys": [
+    {
+      "key": "AUTH_SECRET",
+      "reference": "op://example-staging/marketing/AUTH_SECRET",
+      "is_buildtime": false,
+      "is_runtime": true,
+      "is_literal": true,
+      "is_multiline": false
+    }
+  ],
+  "projectUUID": "REPLACE-PROJECT-UUID"
+}

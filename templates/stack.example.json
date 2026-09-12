@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "project": "example",
+  "name": "task",
+  "route": "/",
+  "services": [
+    { "name": "website", "adapter": "command", "path": ".", "host": "", "port": 14000,
+      "command": ["npm", "run", "dev", "--", "--host", "{host}", "--port", "{port}"],
+      "readiness": "/", "profiles": ["visual"], "env": {}, "secrets": {} }
+  ]
+}

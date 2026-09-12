@@ -7,15 +7,14 @@ isolation, Caddy route generation and readiness, dashboard Host/Origin/token
 checks, and offline/fake-tested secret synchronization.
 
 CI runs Node 22 and 24 on macOS and Linux. Native project adoption checks cover
-trusted HTTPS through ordinary macOS DNS, Next/Vite hot reload, theme/menu
-interaction, same-origin iframe messages and isolated sibling/branch cookies.
+trusted HTTPS through ordinary macOS DNS, native hot reload, browser
+interaction, embedded-page messaging and isolated cross-service cookies.
 Dashboard checks exercise start/stop and page QR updates at 390px and 1280px through
 `https://dashboard.localhost:8443` with normal certificate verification.
 
-A native Apple Silicon PostgreSQL/PostGIS stack was exercised with synthetic
-fixtures, captured-email sign-in, shared secure cookies, device pairing and
-failure cases. These are local integration checks, not third-party authentication
-or payment verification. Phone trust and Tailscale split DNS require actual device
+Optional local data services were exercised with synthetic fixtures and
+application-provided integration checks. These checks establish local behavior;
+external service integrations require separate verification. Phone trust and Tailscale split DNS require actual device
 checks; desktop viewports and DNS overrides do not establish them.
 
 Review package contents with `npm pack --dry-run` before publishing. Machine
